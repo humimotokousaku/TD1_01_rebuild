@@ -49,12 +49,22 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	int frame = 60;
 	// チャージ時間
 	int blinkChageTime = 60;
-
+	// バリア
+	Player barrier = {
+		{player.pos.x,player.pos.y},
+		{6.0f,6.0f},
+		32.0f,
+		RED
+	};
+	int barrierTime = 120;
+	int barrierHp = 10;
 	// フラグ
 	// 1秒チャージしたらtrueになって攻撃
 	int isBlinkChageMax = false;
 	// SPACE押してる間方向指定できる
 	int isDirection = false;
+	// バリア
+	int isBarrier = false;
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -82,11 +92,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		// SPACEを1秒以上押した後チャージ攻撃ができる
 		if (!keys[DIK_SPACE] && preKeys[DIK_SPACE]) {
 			if (blinkChageTime <= 0) {
-				isBlinkChageMax = true;
-				isDirection = false;
+				isBlinkChageMax = true;		
+			}
+			// バリア展開
+			else if (blinkChageTime >= 50) {
+				if (!isBlinkChageMax) {
+					isBarrier = true;
+				}
 			}
 			// SPACEを1秒未満で離したらチャージ時間を初期化
 			blinkChageTime = 60;
+			isDirection = false;
 		}
 
 		// チャージ攻撃の方向指定ここから↓
@@ -94,17 +110,32 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		if (isDirection) {
 			blinkPlayer.pos.x = player.pos.x;
 			blinkPlayer.pos.y = player.pos.y;
-			if (keys[DIK_UP]) {
+			if (keys[DIK_W]) {
 				theta += 0.1f;
 			}
-			else if (keys[DIK_DOWN]) {
+			else if (keys[DIK_S]) {
 				theta -= 0.1f;
 			}
-			else if (keys[DIK_LEFT]) {
+			else if (keys[DIK_A]) {
 				theta += 0.1f;
 			}
-			else if (keys[DIK_RIGHT]) {
+			else if (keys[DIK_D]) {
 				theta -= 0.1f;
+			}
+		}
+		// SPACE押してないときはplayerの移動
+		if(isBarrier || !isDirection) {
+			if (keys[DIK_W]) {
+				player.pos.y -= player.speed.y;
+			}
+			else if (keys[DIK_S]) {
+				player.pos.y += player.speed.y;
+			}
+			else if (keys[DIK_A]) {
+				player.pos.x -= player.speed.x;
+			}
+			else if (keys[DIK_D]) {
+				player.pos.x += player.speed.x;
 			}
 		}
 		// 
@@ -132,6 +163,25 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			frame = 60;
 		}
 		// チャージ攻撃の処理ここまで↑
+		
+		// バリアの処理
+		if (!isBlinkChageMax) {
+			// バリアが出てるときはチャージ攻撃できない
+			if (isBarrier) {
+				barrier.pos.x = player.pos.x;
+				barrier.pos.y = player.pos.y;
+				barrierTime--;
+				blinkChageTime = 60;
+			}
+			// バリアは2秒で消える
+			if (barrierTime <= 0) {
+				isBarrier = false;
+				barrierTime = 120;
+			}
+		}
+		
+
+	
 		///
 		/// ↑更新処理ここまで
 		///
@@ -141,11 +191,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 		// player
 		Novice::DrawEllipse(player.pos.x, player.pos.y, player.radius, player.radius, 0.0f, player.color, kFillModeSolid);
+		// バリア
+		if (isBarrier) {
+			Novice::DrawEllipse(barrier.pos.x, barrier.pos.y, barrier.radius, barrier.radius, 0.0f, barrier.color, kFillModeWireFrame);
+		}
+
 		// 文字表示
 		Novice::ScreenPrintf(0, 10, "Theta:%f", theta);
 		Novice::ScreenPrintf(0, 30, "PlayerPosX,Y:%1.f:%1.f", player.pos.x, player.pos.y);
 		Novice::ScreenPrintf(0, 50, "ChageTime:%d", blinkChageTime);
 		Novice::ScreenPrintf(0, 70, "AttackTime:%d", frame);
+		Novice::ScreenPrintf(0, 90, "isBarrier:%d", isBarrier);
+		Novice::ScreenPrintf(0, 110, "isDirection:%d", isDirection);
 
 		///
 		/// ↑描画処理ここまで
